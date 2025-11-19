@@ -39,6 +39,129 @@
             text-decoration: none;
         }
 
+        /* --- STYLE PENCARIAN BARU --- */
+        .search-trigger-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #D2B48C;
+            transition: transform 0.2s;
+            margin-left: auto; /* Dorong ke kanan */
+            margin-right: 15px;
+        }
+        
+        .search-trigger-btn:hover {
+            transform: scale(1.1);
+            color: white;
+        }
+
+        .search-content {
+            align-items: stretch !important; /* Agar lebar penuh */
+            text-align: left;
+            min-height: 50vh;
+            justify-content: flex-start !important;
+        }
+
+        .search-box-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            font-size: 1.1rem;
+            border: 2px solid #8B4513;
+            border-radius: 12px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        
+        #search-input:focus {
+            border-color: #A0522D;
+            box-shadow: 0 0 8px rgba(139, 69, 19, 0.3);
+        }
+
+        .search-icon-inside {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: #888;
+        }
+
+        .search-results-list {
+            overflow-y: auto;
+            max-height: 50vh;
+            margin-top: 10px;
+        }
+
+        .search-item-result {
+            display: flex;
+            align-items: center; /* Center vertical */
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-item-result:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Style Thumbnail di Search */
+        .search-item-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 15px;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0; /* Agar gambar tidak mengecil */
+            border: 1px solid #ddd;
+        }
+
+        .search-item-info {
+            flex: 1;
+        }
+
+        .result-name {
+            font-weight: bold;
+            color: #3E2723;
+            font-size: 1rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .result-category {
+            font-size: 0.75rem;
+            color: #666;
+            background: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .result-price {
+            color: #8B4513;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #888;
+            padding: 20px;
+            font-style: italic;
+        }
+        /* --- AKHIR STYLE PENCARIAN --- */
+
         /* Menu Page Styles */
         .menu-slider-container {
             position: relative;
@@ -878,6 +1001,10 @@
 <body>
     <nav class="nav-bar">
         <a href="#" class="nav-brand">☕ Payboss Cafe</a>
+        <!-- TOMBOL PENCARIAN BARU -->
+        <button class="search-trigger-btn" onclick="openSearch()">
+            🔍
+        </button>
     </nav>
 
     <div id="menu-page">
@@ -901,6 +1028,26 @@
         🛒
         <span class="cart-count" id="cart-count">0</span>
     </button>
+
+    <!-- MODAL PENCARIAN BARU -->
+    <div class="modal" id="search-modal">
+        <div class="modal-content search-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin:0; font-size: 1.3rem;">Cari Menu</h3>
+                <button class="close-cart" onclick="closeModal('search-modal')" style="color: #3E2723; background:none; font-size: 2rem;">×</button>
+            </div>
+            
+            <div class="search-box-wrapper">
+                <span class="search-icon-inside">🔍</span>
+                <input type="text" id="search-input" placeholder="Ketik menu (contoh: Nasi)..." autocomplete="off">
+            </div>
+
+            <div id="search-results" class="search-results-list">
+                <!-- Hasil pencarian akan muncul di sini -->
+            </div>
+        </div>
+    </div>
+    <!-- AKHIR MODAL PENCARIAN -->
 
     <div class="cart-sidebar" id="cart-sidebar">
         <div class="cart-header">
@@ -1145,9 +1292,11 @@
             setupSwipeAndKeyListeners();
 
             // [--- TAMBAHAN CETAK STRUK ---]
-            // Memasang listener untuk tombol cetak baru di modal sukses
             document.getElementById('print-receipt-btn').addEventListener('click', printCustomerReceipt);
-            // [--- AKHIR TAMBAHAN ---]
+            
+            // [--- EVENT LISTENER UNTUK PENCARIAN ---]
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', handleSearchInput);
         });
 
         function initializeAppLogic() {
@@ -1169,6 +1318,121 @@
 
             updateCartDisplay();
         }
+
+        // --- LOGIKA PENCARIAN BARU ---
+        window.openSearch = function() {
+            document.getElementById('search-modal').classList.add('active');
+            setTimeout(() => {
+                document.getElementById('search-input').focus();
+            }, 100);
+        }
+
+        function handleSearchInput(e) {
+            const term = e.target.value.toLowerCase();
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+
+            if (term.length < 2) {
+                if (term.length === 0) resultsContainer.innerHTML = '';
+                return;
+            }
+
+            const matches = allMenuItems.filter(item => 
+                item.name.toLowerCase().includes(term)
+            );
+
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = `<div class="no-results">Tidak ada menu dengan nama "${e.target.value}"</div>`;
+                return;
+            }
+
+            matches.forEach(item => {
+                // --- PERBAIKAN LOGIKA KETERSEDIAAN ---
+                // Jika isAvailable undefined atau null, anggap true (Tersedia)
+                // Hanya dianggap HABIS jika secara eksplisit diset ke false
+                const isAvailable = item.isAvailable !== false; 
+                
+                // Hitung harga terendah
+                let priceDisplay = "Harga Tdk Tersedia";
+                if (item.priceOptions && item.priceOptions.length > 0) {
+                    const prices = item.priceOptions.map(p => p.price);
+                    const minPrice = Math.min(...prices);
+                    priceDisplay = `Mulai Rp ${minPrice.toLocaleString('id-ID')}`;
+                } else if (item.price) {
+                    priceDisplay = `Rp ${item.price.toLocaleString('id-ID')}`;
+                }
+
+                // --- PERBAIKAN GAMBAR ---
+                // Menambahkan elemen gambar thumbnail
+                let thumbHtml = '';
+                if (item.imageUrl && item.imageUrl.trim() !== '') {
+                    thumbHtml = `<img src="${item.imageUrl}" class="search-item-thumb" alt="${item.name}">`;
+                } else {
+                    thumbHtml = `<div class="search-item-thumb">${item.emoji || '🍽️'}</div>`;
+                }
+
+                const div = document.createElement('div');
+                div.className = 'search-item-result';
+                div.onclick = () => selectItemFromSearch(item);
+                
+                // Layout Flexbox: [Thumbnail] - [Info Menu] - [Harga]
+                div.innerHTML = `
+                    ${thumbHtml}
+                    <div class="search-item-info">
+                        <div class="result-name">${item.name}</div>
+                        <span class="result-category">${item.category || 'Lainnya'}</span>
+                        ${!isAvailable ? '<span style="color:red; font-weight:bold; font-size:0.8rem; margin-left:5px;">HABIS</span>' : ''}
+                    </div>
+                    <div class="result-price">${priceDisplay}</div>
+                `;
+                resultsContainer.appendChild(div);
+            });
+        }
+
+        window.selectItemFromSearch = function(item) {
+            // Cek ketersediaan dengan logika yang diperbaiki
+            if (item.isAvailable === false) {
+                showNotification("Maaf, item ini sedang habis.", true);
+                return;
+            }
+            
+            // Tutup modal search
+            closeModal('search-modal');
+            
+            // Buka modal opsi item
+            prepareAndOpenItemModal(item);
+        }
+
+        // Fungsi pembantu baru untuk membuka modal (refactoring dari showItemOptions)
+        function prepareAndOpenItemModal(item) {
+            currentModalItem = item;
+            currentModalQuantity = 1;
+
+            document.getElementById('modal-item-name').textContent = item.name;
+            document.getElementById('modal-item-description').textContent = item.description || '';
+
+            const variantGroup = document.getElementById('modal-variant-group');
+            const variantSelect = document.getElementById('modal-item-variant');
+
+            if (item.priceOptions && item.priceOptions.length > 1) {
+                variantGroup.style.display = 'block';
+                variantSelect.innerHTML = '';
+
+                item.priceOptions.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = `${option.name}|${option.price}`;
+                    optionElement.textContent = `${option.name} - Rp ${option.price.toLocaleString('id-ID')}`;
+                    variantSelect.appendChild(optionElement);
+                });
+            } else {
+                variantGroup.style.display = 'none';
+                variantSelect.innerHTML = '';
+            }
+
+            updateModalPriceAndQuantity();
+            document.getElementById('item-options-modal').classList.add('active');
+        }
+        // --- AKHIR LOGIKA PENCARIAN ---
 
         function renderCategoryButtons() {
             const container = document.getElementById('category-selector');
@@ -1293,33 +1557,8 @@
         window.showItemOptions = function (itemIndex) {
             const item = currentMenuItems[itemIndex];
             if (!item) return;
-
-            currentModalItem = item;
-            currentModalQuantity = 1;
-
-            document.getElementById('modal-item-name').textContent = item.name;
-            document.getElementById('modal-item-description').textContent = item.description || '';
-
-            const variantGroup = document.getElementById('modal-variant-group');
-            const variantSelect = document.getElementById('modal-item-variant');
-
-            if (item.priceOptions && item.priceOptions.length > 1) {
-                variantGroup.style.display = 'block';
-                variantSelect.innerHTML = '';
-
-                item.priceOptions.forEach(option => {
-                    const optionElement = document.createElement('option');
-                    optionElement.value = `${option.name}|${option.price}`;
-                    optionElement.textContent = `${option.name} - Rp ${option.price.toLocaleString('id-ID')}`;
-                    variantSelect.appendChild(optionElement);
-                });
-            } else {
-                variantGroup.style.display = 'none';
-                variantSelect.innerHTML = '';
-            }
-
-            updateModalPriceAndQuantity();
-            document.getElementById('item-options-modal').classList.add('active');
+            // Menggunakan fungsi helper baru agar konsisten dengan search
+            prepareAndOpenItemModal(item);
         }
 
         window.updateModalQuantity = function (amount) {
@@ -1433,7 +1672,8 @@
                 if (document.getElementById('item-options-modal').classList.contains('active') ||
                     document.getElementById('checkout-modal').classList.contains('active') ||
                     document.getElementById('payment-modal').classList.contains('active') ||
-                    document.getElementById('success-modal').classList.contains('active')) {
+                    document.getElementById('success-modal').classList.contains('active') ||
+                    document.getElementById('search-modal').classList.contains('active')) {
                     return;
                 }
 
@@ -1716,24 +1956,19 @@
 
 
         // [--- TAMBAHAN CETAK STRUK ---]
-        // Fungsi ini disalin dari aplikasi staf dan diadaptasi
-        // untuk membaca data dari modal sukses dan variabel 'cart'.
         function printCustomerReceipt() {
-            // 1. Ambil data dari elemen HTML di modal sukses
             const customer = document.getElementById('success-customer').textContent;
             const table = document.getElementById('success-table').textContent;
-            const date = document.getElementById('success-date').textContent; // Sudah terformat
-            const total = document.getElementById('success-total').textContent; // "Rp 123.000"
-            const queueNumber = document.getElementById('success-queue-number').textContent; // "#123"
+            const date = document.getElementById('success-date').textContent;
+            const total = document.getElementById('success-total').textContent; 
+            const queueNumber = document.getElementById('success-queue-number').textContent;
 
-            // 2. Siapkan helper untuk format teks struk
             const receiptWidth = 32; 
             const pad = (str, len, char = ' ') => String(str).padEnd(len, char);
             const padLeft = (str, len, char = ' ') => String(str).padStart(len, char);
             
             let receiptText = '';
 
-            // 3. Buat Header Struk (sama seperti di aplikasi staf)
             receiptText += "         PAY BOSS CAFE\n";
             receiptText += " Jl. Tanjung Permai No 2 RT 07\n";
             receiptText += "    Pembataan.Murung Pudak.\n";
@@ -1741,16 +1976,13 @@
             receiptText += "    Reservasi: 0811-5194-456\n";
             receiptText += "--------------------------------\n";
             
-            // 4. Buat Info Pesanan
             receiptText += `Meja: ${table}\n`;
             receiptText += `Pelanggan: ${customer}\n`;
             receiptText += `No. Antrian: ${queueNumber}\n`;
             receiptText += `Waktu: ${date}\n`;
             receiptText += "--------------------------------\n";
 
-            // 5. Buat Daftar Item (diambil dari variabel global 'cart')
             cart.forEach(item => {
-                // 'item.key' sudah berisi nama + varian, cth: "Kopi Susu (Ice)"
                 let itemName = `${item.quantity}x ${item.key}`;
                 
                 if (itemName.length > receiptWidth) {
@@ -1760,37 +1992,30 @@
                     receiptText += pad(itemName, receiptWidth) + "\n";
                 }
                 
-                // Baris 2: Harga (rata kanan)
                 const itemTotal = item.price * item.quantity;
                 receiptText += padLeft(`Rp ${itemTotal.toLocaleString('id-ID')}`, receiptWidth) + "\n";
             });
             receiptText += "--------------------------------\n";
 
-            // 6. Buat Bagian Total
-            const totalText = total.trim(); // Ambil "Rp 123.000"
+            const totalText = total.trim(); 
             receiptText += pad("GRAND TOTAL", 18) + padLeft(totalText, 14) + "\n";
             receiptText += "--------------------------------\n";
 
-            // 7. Buat Footer Struk (sama seperti di aplikasi staf)
             receiptText += "      Wifi : Pay Boss Cafe\n";
             receiptText += "     Pasword : P4yB0sSC4F3\n";
             receiptText += "--------------------------------\n";
             receiptText += "Terimakasih atas kunjungan anda.\n";
             receiptText += "    Instagram: Payboss.cafe\n";
-            receiptText += "\n\n\n"; // Feed paper
+            receiptText += "\n\n\n"; 
 
-            // 8. Panggil RawBT
             const encodedReceiptText = encodeURIComponent(receiptText);
             const rawBtUrl = `rawbt:${encodedReceiptText}`;
             const printWindow = window.open(rawBtUrl, '_blank');
             
             if (!printWindow) {
-                // Fungsi showNotification sudah ada di file ini
                 showNotification("Gagal membuka RawBT. Izinkan popup untuk aplikasi ini.", true);
             }
         }
-        // [--- AKHIR TAMBAHAN ---]
-
 
         window.closeModal = function (modalId) {
             document.getElementById(modalId).classList.remove('active');
@@ -1798,6 +2023,12 @@
             if (modalId === 'item-options-modal') {
                 currentModalItem = null;
                 currentModalQuantity = 1;
+            }
+            
+            // Reset search input ketika modal search ditutup
+            if (modalId === 'search-modal') {
+                document.getElementById('search-input').value = '';
+                document.getElementById('search-results').innerHTML = '';
             }
         }
 
